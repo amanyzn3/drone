@@ -850,9 +850,9 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                       <line x1="330" y1="122" x2="376" y2="122" stroke="rgba(56, 189, 248, 0.4)" strokeWidth="1" strokeDasharray="2 2" />
                       <text x="353" y="127" fill="#bae6fd" fontSize="7.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle">HANGAR</text>
 
-                      {/* Helipad with 'H' and yellow perimeter beacon lights */}
-                      <circle cx="353" cy="180" r="16" fill="#0a1830" stroke="#eab308" strokeWidth="1.2" strokeDasharray="3 2" />
-                      <text x="353" y="185" fill="#facc15" fontSize="11" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">H</text>
+                      {/* Helipad with 'H' in matching cyan compound palette */}
+                      <circle cx="353" cy="180" r="14" fill="#0a1830" stroke="#38bdf8" strokeWidth="1" />
+                      <text x="353" y="184" fill="#7dd3fc" fontSize="10" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">H</text>
 
                       {/* North Gatehouse Security Checkpoint */}
                       <rect x="246" y="60" width="28" height="14" rx="2" fill="#1e293b" stroke="#38bdf8" strokeWidth="1" />
@@ -965,7 +965,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                           className="transition-all duration-200"
                         />
                         {isCalibrating && (
-                          <circle cx={sx} cy={sy} r="16" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
+                          <circle cx={sx} cy={sy} r="16" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
                         )}
 
                         <text
