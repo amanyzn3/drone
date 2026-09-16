@@ -17,7 +17,7 @@ export interface ExecutiveOverviewProps {
   sensors?: AcousticSensor[];
   isSimulating: boolean;
   onToggleSimulation: () => void;
-  onNavigateToTesting: () => void;
+  onNavigateToTesting: (trackId?: string) => void;
   onTriggerScenario?: (type: 'quadcopter' | 'fpv' | 'birds' | 'clear') => void;
   onAnalysisCompleted?: (result: AnalysisResult) => void;
 }
@@ -379,7 +379,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
           {/* Test Sound Button */}
           <button
-            onClick={onNavigateToTesting}
+            onClick={() => onNavigateToTesting()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-black font-bold text-xs font-heading shadow-[0_0_15px_rgba(34,211,238,0.3)] hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] transition-all"
           >
             <FlaskConical className="w-3.5 h-3.5" />
@@ -388,40 +388,54 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
         </div>
       </div>
 
-      {/* CRITICAL AIRSPACE DRONE ALERT BANNER (Triggers immediately on Drone Detection) */}
-      {activeTarget && (activeTarget.status === 'LOCKED' || activeTarget.targetType.includes('Drone') || activeTarget.targetType.includes('Quadcopter') || activeTarget.targetType.includes('FPV')) && (
-        <div className="p-4 rounded-2xl bg-red-950/80 border-2 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)] flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-xl bg-red-500 text-white font-bold animate-bounce shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.9)]">
-              <ShieldAlert className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider">
-                  CRITICAL AIRSPACE THREAT
-                </span>
-                <span className="text-red-300 font-mono text-xs">• ACOUSTIC TARGET LOCKED</span>
-              </div>
-              <h3 className="text-lg font-bold text-white font-heading mt-0.5">
-                {activeTarget.targetType.toUpperCase()} DETECTED IN PERIMETER
-              </h3>
-              <p className="text-xs text-red-200 font-mono mt-0.5">
-                Azimuth Bearing: <strong className="text-white">{activeTarget.bearingDeg}°</strong> | Distance: <strong className="text-white">{activeTarget.distanceMeters}m</strong> | Match Confidence: <strong className="text-emerald-300">{activeTarget.confidencePct}%</strong> | Auto-PTZ Camera Slewed
-              </p>
-            </div>
-          </div>
+      {/* CRITICAL AIRSPACE DRONE ALERT BANNER (Triggers immediately on verified Drone Detection) */}
+      {(() => {
+        const isDroneTarget = activeTarget && (
+          activeTarget.targetType.includes('Drone') || 
+          activeTarget.targetType.includes('Quadcopter') || 
+          activeTarget.targetType.includes('FPV') || 
+          activeTarget.targetType.includes('UAV')
+        );
+        const hasActiveDroneThreat = isDroneTarget && (activeTarget.status === 'LOCKED' || activeTarget.status === 'TRACKING');
+        if (!hasActiveDroneThreat || !activeTarget) return null;
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => onNavigateToTesting()}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold transition-all flex items-center gap-1.5"
-            >
-              <FlaskConical className="w-4 h-4" />
-              <span>Inspect Spectrum</span>
-            </button>
+        const isFpv = activeTarget.targetType.includes('FPV') || activeTarget.targetType.includes('Racing');
+        const targetTrackId = isFpv ? 'demo-fpv-drone' : 'demo-quad-hover';
+
+        return (
+          <div className="p-4 rounded-2xl bg-red-950/80 border-2 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)] flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 rounded-xl bg-red-500 text-white font-bold animate-bounce shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.9)]">
+                <ShieldAlert className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider">
+                    CRITICAL AIRSPACE THREAT
+                  </span>
+                  <span className="text-red-300 font-mono text-xs">• ACOUSTIC TARGET LOCKED</span>
+                </div>
+                <h3 className="text-lg font-bold text-white font-heading mt-0.5">
+                  {activeTarget.targetType.toUpperCase()} DETECTED IN PERIMETER
+                </h3>
+                <p className="text-xs text-red-200 font-mono mt-0.5">
+                  Azimuth Bearing: <strong className="text-white">{activeTarget.bearingDeg}°</strong> | Distance: <strong className="text-white">{activeTarget.distanceMeters}m</strong> | Match Confidence: <strong className="text-emerald-300">{activeTarget.confidencePct}%</strong> | Auto-PTZ Camera Slewed
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => onNavigateToTesting(targetTrackId)}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span>Inspect Spectrum</span>
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 2. INLINE ACOUSTIC RECORDING & SOUND PROBE STATION */}
       <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-3 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-900/90">
@@ -621,7 +635,15 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={onNavigateToTesting}
+                onClick={() => {
+                  if (lastMicResult?.classification === 'DRONE_DETECTED') {
+                    const isFpv = lastMicResult.soundClassification?.includes('FPV');
+                    onNavigateToTesting(isFpv ? 'demo-fpv-drone' : 'demo-quad-hover');
+                  } else {
+                    const isWind = lastMicResult?.soundClassification?.includes('Wind');
+                    onNavigateToTesting(isWind ? 'demo-wind-noise' : 'demo-fan-noise');
+                  }
+                }}
                 className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold transition-colors flex items-center gap-1.5"
               >
                 <FlaskConical className="w-3.5 h-3.5" />
@@ -1429,7 +1451,10 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
 
                 <button
                   type="button"
-                  onClick={onNavigateToTesting}
+                  onClick={() => {
+                    const isFpv = activeTarget?.targetType?.includes('FPV') || activeTarget?.targetType?.includes('Racing');
+                    onNavigateToTesting(isFpv ? 'demo-fpv-drone' : 'demo-quad-hover');
+                  }}
                   className="w-full py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
                 >
                   <FlaskConical className="w-3.5 h-3.5" />

@@ -19,6 +19,7 @@ interface ManualTestingLabProps {
   sensors?: AcousticSensor[];
   onClearHistory: () => void;
   onNavigateToOverview?: () => void;
+  initialDemoTrackId?: string;
 }
 
 export const ManualTestingLab: React.FC<ManualTestingLabProps> = ({
@@ -26,7 +27,8 @@ export const ManualTestingLab: React.FC<ManualTestingLabProps> = ({
   history,
   sensors = [],
   onClearHistory,
-  onNavigateToOverview
+  onNavigateToOverview,
+  initialDemoTrackId
 }) => {
   // Primary Navigation Mode: 'live' (Real-Time Matching) | 'library' (Trained Profiles) | 'diagnostic' (File Bench)
   const [labMode, setLabMode] = useState<'live' | 'library' | 'diagnostic'>('live');
@@ -95,7 +97,7 @@ export const ManualTestingLab: React.FC<ManualTestingLabProps> = ({
 
   // --- DIAGNOSTIC BENCH & PLAYER STATE ---
   const [benchSourceMode, setBenchSourceMode] = useState<'presets' | 'upload' | 'mic'>('presets');
-  const [selectedDemoId, setSelectedDemoId] = useState<string>('demo-quad-hover');
+  const [selectedDemoId, setSelectedDemoId] = useState<string>(initialDemoTrackId || 'demo-quad-hover');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [activeFileName, setActiveFileName] = useState<string>('quadcopter_hover_stationary.wav');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -105,6 +107,20 @@ export const ManualTestingLab: React.FC<ManualTestingLabProps> = ({
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+
+  // Sync initialDemoTrackId when provided from Inspect Spectrum
+  useEffect(() => {
+    if (initialDemoTrackId) {
+      setSelectedDemoId(initialDemoTrackId);
+      const track = DEMO_TRACKS.find(t => t.id === initialDemoTrackId);
+      if (track) {
+        setActiveFileName(track.fileName);
+        setUploadedFile(null);
+        setLabMode('diagnostic');
+        setBenchSourceMode('presets');
+      }
+    }
+  }, [initialDemoTrackId]);
 
   // Bench Microphone Recording State
   const [isBenchRecording, setIsBenchRecording] = useState<boolean>(false);

@@ -70,6 +70,14 @@ const DEFAULT_SENSORS: AcousticSensor[] = [
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [selectedTestingTrackId, setSelectedTestingTrackId] = useState<string>('demo-quad-hover');
+
+  const handleNavigateToTesting = (trackId?: string) => {
+    if (trackId) {
+      setSelectedTestingTrackId(trackId);
+    }
+    setActiveTab('testing');
+  };
 
   // Acoustic Sensor Arrays State (shared across Radar & Sensor management)
   const [sensors, setSensors] = useState<AcousticSensor[]>(() => {
@@ -109,18 +117,8 @@ export function App() {
   // Security Alerts State
   const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
 
-  // Live Radar Events
-  const [recentEvents, setRecentEvents] = useState<DetectionEvent[]>([
-    {
-      id: 'EVT-101',
-      timestamp: '11:42:15 AM',
-      bearingDeg: 114,
-      distanceMeters: 280,
-      confidencePct: 94,
-      targetType: 'Quadcopter Drone (Acoustic)',
-      status: 'LOCKED'
-    }
-  ]);
+  // Live Radar Events (Initial State: Clean airspace, no false alerts)
+  const [recentEvents, setRecentEvents] = useState<DetectionEvent[]>([]);
 
   // Simulation Mode State
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
@@ -202,6 +200,7 @@ export function App() {
           status: 'Completed'
         };
         setHistory(prev => [newHist, ...prev]);
+        setRecentEvents([]);
       }
 
     }, 7000); // Trigger every 7s in simulation mode
@@ -231,14 +230,14 @@ export function App() {
       id: result.id,
       fileName: result.fileName,
       dateTime: result.timestamp,
-      audioType: result.isDemoAnalysis ? 'Demo Sample' : 'Custom Upload',
+      audioType: result.isDemoAnalysis ? 'Demo Sample' : 'Custom Upload / Mic',
       classification: result.classification,
       confidence: result.confidence,
       status: 'Completed'
     };
     setHistory(prev => [newHist, ...prev]);
 
-    // 3. Create Alert and Radar Blip if Drone Detected or Uncertain
+    // 3. Create Alert and Radar Blip if Drone Detected or Clear on NO_DRONE
     if (result.classification === 'DRONE_DETECTED') {
       const newAlert: SecurityAlert = {
         id: `ALT-${Math.floor(100 + Math.random() * 900)}`,
@@ -270,6 +269,9 @@ export function App() {
           status: 'LOCKED'
         }
       ]);
+    } else if (result.classification === 'NO_DRONE') {
+      // Clear active radar drone alerts when verified non-drone sound is tested
+      setRecentEvents([]);
     } else if (result.classification === 'UNCERTAIN') {
       const newAlert: SecurityAlert = {
         id: `REV-${Math.floor(100 + Math.random() * 900)}`,
@@ -438,7 +440,7 @@ export function App() {
             sensors={sensors}
             isSimulating={isSimulating}
             onToggleSimulation={() => setIsSimulating(!isSimulating)}
-            onNavigateToTesting={() => setActiveTab('testing')}
+            onNavigateToTesting={handleNavigateToTesting}
             onTriggerScenario={handleTriggerScenario}
             onAnalysisCompleted={handleAnalysisCompleted}
           />
@@ -452,6 +454,7 @@ export function App() {
             sensors={sensors}
             onClearHistory={handleClearHistory}
             onNavigateToOverview={() => setActiveTab('overview')}
+            initialDemoTrackId={selectedTestingTrackId}
           />
         )}
 
