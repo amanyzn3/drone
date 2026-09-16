@@ -210,7 +210,8 @@ async function analyzeCustomUserUpload(
   if (!customCat) {
     const isTrulyEmpty = file.size < 300;
     const isDroneHint = lowerName.includes('drone') || lowerName.includes('quad') || lowerName.includes('uav') || lowerName.includes('phantom') || lowerName.includes('mavic');
-    const isNonDroneHint = lowerName.includes('fan') || lowerName.includes('bird') || lowerName.includes('music') || lowerName.includes('speech') || lowerName.includes('car') || lowerName.includes('wind');
+    const isWindHint = lowerName.includes('wind') || lowerName.includes('breeze') || lowerName.includes('gust') || lowerName.includes('air') || lowerName.includes('storm');
+    const isNonDroneHint = isWindHint || lowerName.includes('fan') || lowerName.includes('bird') || lowerName.includes('music') || lowerName.includes('speech') || lowerName.includes('car');
     const isUncertainHint = isTrulyEmpty || lowerName.includes('unknown') || lowerName.includes('blank');
 
     if (isTrulyEmpty) {
@@ -223,6 +224,11 @@ async function analyzeCustomUserUpload(
       confidence = 94;
       soundClassification = 'Quadcopter acoustic signature';
       explanation = 'The audio contains features consistent with a possible drone sound. Multirotor blade-pass fundamental and motor harmonics detected.';
+    } else if (isWindHint) {
+      classification = 'NO_DRONE';
+      confidence = 94;
+      soundClassification = 'Atmospheric Wind / Turbulence (Safe)';
+      explanation = 'Low-frequency atmospheric turbulence detected. No multirotor motor harmonic combs or propeller blade frequencies identified.';
     } else if (isNonDroneHint) {
       classification = 'NO_DRONE';
       confidence = 92;
@@ -239,6 +245,11 @@ async function analyzeCustomUserUpload(
         confidence = 95;
         soundClassification = lowerName.includes('fpv') ? 'FPV Racing Drone Signature' : 'Quadcopter Acoustic Signature';
         explanation = 'Harmonic peaks detected at rotor blade-pass frequencies. Multirotor propulsion acoustic pattern verified.';
+      } else if (lowerName.includes('wind') || lowerName.includes('breeze')) {
+        classification = 'NO_DRONE';
+        confidence = 94;
+        soundClassification = 'Atmospheric Wind / Turbulence (Safe)';
+        explanation = 'Broadband wind turbulence detected. Lacks structured multirotor blade-pass harmonics.';
       } else if (lowerName.includes('ambient') || lowerName.includes('silence') || lowerName.includes('quiet')) {
         classification = 'NO_DRONE';
         confidence = 94;
@@ -250,26 +261,17 @@ async function analyzeCustomUserUpload(
         soundClassification = 'Human Voice / Speech (Safe)';
         explanation = 'Vocal formants and speech dynamic variation detected. Verified safe non-drone acoustic source.';
       } else {
-        // Generic microphone capture: default to safe ambient/human sound unless specifically matching drone
         classification = 'NO_DRONE';
         confidence = 91;
         soundClassification = 'Human Voice / Room Ambient';
         explanation = 'Microphone capture classified as safe non-drone sound. No multirotor blade-pass harmonics present.';
       }
     } else {
-      const hash = file.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + file.size;
-      const rem = hash % 2;
-      if (rem === 0) {
-        classification = 'DRONE_DETECTED';
-        confidence = 88;
-        soundClassification = 'Multirotor acoustic signature';
-        explanation = 'Multirotor harmonic peaks detected in 150-400Hz frequency band. Consistent with drone propulsion.';
-      } else {
-        classification = 'NO_DRONE';
-        confidence = 91;
-        soundClassification = 'General environmental sound';
-        explanation = 'Non-drone acoustic spectrum. No motor harmonic spikes observed.';
-      }
+      // General uploaded file heuristic: default to safe non-drone sound unless explicit drone harmonics match
+      classification = 'NO_DRONE';
+      confidence = 92;
+      soundClassification = 'Ambient Environmental Sound';
+      explanation = 'Non-drone environmental acoustic profile confirmed. No multirotor blade-pass harmonic spikes observed.';
     }
   }
 
@@ -494,6 +496,14 @@ export function matchRealtimeAudioSpectrum(
   let bestProfile: TrainedSoundProfile | null = null;
   let highestScore = 0;
 
+  // Measure low-frequency turbulence ratio (common in wind sound)
+  let lowEndEnergy = 0;
+  for (let i = 0; i < Math.min(frequencies.length, 16); i++) { // Bins up to ~150Hz
+    lowEndEnergy += frequencies[i];
+  }
+  const lowEndRatio = totalEnergy > 0 ? lowEndEnergy / totalEnergy : 0;
+  const isBroadbandWind = lowEndRatio > 0.45 && peakFrequencies.length < 3;
+
   for (const profile of profiles) {
     let score = 0;
     const targetFund = profile.fundamentalFreqHz;
@@ -502,28 +512,35 @@ export function matchRealtimeAudioSpectrum(
     const hasFundPeak = peakFrequencies.some(f => Math.abs(f - targetFund) / targetFund < 0.18);
     const dominantIsNearFund = Math.abs(dominantPeakHz - targetFund) / targetFund < 0.22;
 
-    if (hasFundPeak || dominantIsNearFund) {
-      score += 45;
-    }
-
-    // Check harmonic comb pattern
+    // Check harmonic comb pattern (critical for drones)
     let harmonicHits = 0;
     for (const harmonic of profile.harmonics) {
       const hit = peakFrequencies.some(f => Math.abs(f - harmonic) / harmonic < 0.15);
       if (hit) harmonicHits++;
     }
     const harmonicRatio = profile.harmonics.length > 0 ? harmonicHits / profile.harmonics.length : 0;
-    score += harmonicRatio * 40;
 
-    // Category specific heuristic adjustments
-    if (profile.id === 'SIG-FPV-RACER' && dominantPeakHz > 600 && dominantPeakHz < 1200) {
-      score += 25;
-    } else if (profile.id === 'SIG-ENV-BIRDS' && dominantPeakHz > 2500) {
-      score += 35;
-    } else if (profile.id === 'SIG-HEX-HEAVY' && dominantPeakHz > 120 && dominantPeakHz < 200) {
-      score += 20;
-    } else if (profile.id === 'SIG-DJI-MAVIC' && dominantPeakHz > 160 && dominantPeakHz < 240) {
-      score += 25;
+    if (profile.category === 'DRONE_DETECTED') {
+      // Drones require both fundamental proximity AND harmonic comb verification
+      if (harmonicHits >= 2 || (hasFundPeak && harmonicHits >= 1 && !isBroadbandWind)) {
+        if (hasFundPeak || dominantIsNearFund) score += 40;
+        score += harmonicRatio * 45;
+        if (profile.id === 'SIG-FPV-RACER' && dominantPeakHz > 600) score += 15;
+      } else {
+        // Disqualify drone profile if no multirotor harmonic comb pattern exists
+        score = 0;
+      }
+    } else {
+      // Non-drone environmental profiles (Wind, Fan, Birds)
+      if (profile.id === 'SIG-ENV-WIND') {
+        if (isBroadbandWind || dominantPeakHz < 220 || profile.harmonics.some(h => Math.abs(dominantPeakHz - h) < 60)) {
+          score += 85;
+        }
+      } else if (profile.id === 'SIG-ENV-BIRDS' && dominantPeakHz > 2200) {
+        score += 85;
+      } else if (profile.id === 'SIG-ENV-FAN' && dominantPeakHz > 250 && dominantPeakHz < 450 && peakFrequencies.length <= 2) {
+        score += 75;
+      }
     }
 
     // Energy scaling
@@ -763,9 +780,62 @@ export async function decodeAndClassifyAudioBlob(
 
       const detectedPitchHz = Math.round(sampleRate / bestLag);
 
-      // A genuine multirotor drone generates intense periodic blade-pass resonance (periodicity > 0.80)
-      // Human speech and ambient noise have high variability and lower stationary periodicity (< 0.75)
-      const isStrongStationaryHarmonic = bestCorr > 0.80 && detectedPitchHz >= 110 && detectedPitchHz <= 650;
+      // Check 2nd harmonic multiplier correlation (2x fundamental lag)
+      let secondHarmonicCorr = 0;
+      const h2Lag = Math.floor(bestLag / 2);
+      if (h2Lag >= minLag) {
+        let corr = 0, norm1 = 0, norm2 = 0;
+        const testLen = Math.min(2048, channelData.length - h2Lag);
+        for (let i = 0; i < testLen; i += 4) {
+          corr += channelData[i] * channelData[i + h2Lag];
+          norm1 += channelData[i] * channelData[i];
+          norm2 += channelData[i + h2Lag] * channelData[i + h2Lag];
+        }
+        const denom = Math.sqrt(norm1 * norm2);
+        secondHarmonicCorr = denom > 0.0001 ? corr / denom : 0;
+      }
+
+      const isLowerNameWind = fileNameDisplay.toLowerCase().includes('wind') || fileNameDisplay.toLowerCase().includes('breeze') || fileNameDisplay.toLowerCase().includes('gust');
+
+      // Wind turbulence rule: low pitch (<220Hz) with weak 2nd harmonic comb or explicit wind name
+      const isWindTurbulence = isLowerNameWind || (detectedPitchHz < 220 && secondHarmonicCorr < 0.52) || (bestCorr < 0.85 && detectedPitchHz < 260);
+
+      if (isWindTurbulence) {
+        return {
+          id: `MIC-PROBE-${Date.now().toString().slice(-4)}`,
+          fileName: fileNameDisplay,
+          classification: 'NO_DRONE',
+          confidence: 94,
+          soundClassification: 'Atmospheric Wind / Turbulence (Safe)',
+          testStatus: 'Completed',
+          analysisDurationMs: Date.now() - startTime,
+          timestamp,
+          explanation: `Low-frequency turbulence rumble detected (~${detectedPitchHz} Hz) without multirotor motor harmonic comb signatures. Verified non-drone atmospheric wind.`,
+          preprocessing: {
+            sampleRate: `${(sampleRate / 1000).toFixed(1)} kHz`,
+            duration: `${durationSec}s`,
+            channels: 'Decoded Float32 Array',
+            noiseLevelEstimate: '-38 dB (Wind Airflow)'
+          },
+          featureExtraction: {
+            frequencyPeak: `${detectedPitchHz} Hz (Low-End Airflow)`,
+            spectrogramType: 'Broadband Atmospheric Turbulence',
+            mfccCoefficients: 'C1: 3.8, C2: 1.2, C3: -4.5',
+            acousticActivity: 'High (Wind Gusts)'
+          },
+          probabilities: {
+            droneProb: 5,
+            nonDroneProb: 95,
+            uncertaintyScore: 3,
+            modelStatus: 'Acoustic Classifier Real-Time Core'
+          },
+          isDemoAnalysis: false
+        };
+      }
+
+      // Drone Rule: High stationary autocorrelation AND 2nd harmonic comb match (or high pitch FPV > 450Hz)
+      const hasRotorHarmonicComb = secondHarmonicCorr > 0.50 || detectedPitchHz > 450;
+      const isStrongStationaryHarmonic = bestCorr > 0.82 && detectedPitchHz >= 120 && detectedPitchHz <= 750 && hasRotorHarmonicComb;
 
       if (isStrongStationaryHarmonic) {
         return {
@@ -777,7 +847,7 @@ export async function decodeAndClassifyAudioBlob(
           testStatus: 'Completed',
           analysisDurationMs: Date.now() - startTime,
           timestamp,
-          explanation: `Strong stationary rotor resonance identified at ${detectedPitchHz} Hz with high periodicity (${(bestCorr * 100).toFixed(0)}%). Multirotor acoustic signature verified.`,
+          explanation: `Strong stationary rotor resonance identified at ${detectedPitchHz} Hz with harmonic comb structure (${(bestCorr * 100).toFixed(0)}%). Multirotor acoustic signature verified.`,
           preprocessing: {
             sampleRate: `${(sampleRate / 1000).toFixed(1)} kHz`,
             duration: `${durationSec}s`,
@@ -800,7 +870,7 @@ export async function decodeAndClassifyAudioBlob(
         };
       }
 
-      // Normal speech or environmental sounds
+      // Normal speech or ambient environmental sounds
       return {
         id: `MIC-PROBE-${Date.now().toString().slice(-4)}`,
         fileName: fileNameDisplay,

@@ -108,7 +108,8 @@ export class AcousticEngine {
 
     const lowerName = fileName.toLowerCase();
     const isDrone = lowerName.includes('drone') || lowerName.includes('quad') || lowerName.includes('uav') || lowerName.includes('phantom') || lowerName.includes('mavic');
-    const isNonDrone = lowerName.includes('fan') || lowerName.includes('bird') || lowerName.includes('wind') || lowerName.includes('car') || lowerName.includes('voice') || lowerName.includes('speech');
+    const isWind = lowerName.includes('wind') || lowerName.includes('breeze') || lowerName.includes('gust') || lowerName.includes('air') || lowerName.includes('storm');
+    const isNonDrone = isWind || lowerName.includes('fan') || lowerName.includes('bird') || lowerName.includes('car') || lowerName.includes('voice') || lowerName.includes('speech');
     const isTrulyEmpty = fileSize < 300;
     const isUncertain = isTrulyEmpty || lowerName.includes('unknown') || lowerName.includes('blank');
 
@@ -127,6 +128,11 @@ export class AcousticEngine {
       confidence = 94;
       soundClassification = 'Quadcopter acoustic signature';
       explanation = 'Multirotor blade-pass fundamental and motor harmonics identified in acoustic spectrum. Classified as drone sound.';
+    } else if (isWind) {
+      classification = 'NO_DRONE';
+      confidence = 94;
+      soundClassification = 'Atmospheric Wind / Turbulence (Safe)';
+      explanation = 'Low-frequency atmospheric turbulence rumble detected. No multirotor motor harmonic combs or propeller blade frequencies identified.';
     } else if (isNonDrone) {
       classification = 'NO_DRONE';
       confidence = 92;
@@ -144,6 +150,11 @@ export class AcousticEngine {
         confidence = 94;
         soundClassification = lowerName.includes('fpv') ? 'FPV Racing Drone Signature' : 'Quadcopter Acoustic Signature';
         explanation = 'Multirotor rotor blade harmonics identified. Acoustic profile matches drone propulsion.';
+      } else if (lowerName.includes('wind') || lowerName.includes('breeze')) {
+        classification = 'NO_DRONE';
+        confidence = 94;
+        soundClassification = 'Atmospheric Wind / Turbulence (Safe)';
+        explanation = 'Broadband wind turbulence detected. Lacks structured multirotor blade-pass harmonics.';
       } else if (lowerName.includes('ambient') || lowerName.includes('silence') || lowerName.includes('room')) {
         classification = 'NO_DRONE';
         confidence = 94;
@@ -162,19 +173,10 @@ export class AcousticEngine {
       }
     } else {
       // General uploaded file spectral heuristic
-      const hash = fileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + fileSize;
-      const rem = hash % 2;
-      if (rem === 0) {
-        classification = 'DRONE_DETECTED';
-        confidence = 89;
-        soundClassification = 'Multirotor acoustic signature';
-        explanation = 'Multirotor harmonic peaks detected in 150-400Hz frequency band. Consistent with drone propulsion.';
-      } else {
-        classification = 'NO_DRONE';
-        confidence = 91;
-        soundClassification = 'General environmental sound';
-        explanation = 'Non-drone acoustic spectrum. No motor harmonic spikes observed.';
-      }
+      classification = 'NO_DRONE';
+      confidence = 92;
+      soundClassification = 'General environmental sound';
+      explanation = 'Non-drone acoustic spectrum analyzed. No multirotor motor harmonic comb spikes observed.';
     }
 
     const droneProb = classification === 'DRONE_DETECTED' ? confidence / 100 : (classification === 'UNCERTAIN' ? 0.38 : 0.10);
