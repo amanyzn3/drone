@@ -799,17 +799,17 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                     </g>
                   ))}
 
-                  {/* 4. Cardinal Defense Sectors Labeled */}
-                  <text x="260" y="48" fill="#38bdf8" fontSize="9" fontWeight="bold" fontFamily="monospace" textAnchor="middle" letterSpacing="1">
+                  {/* 4. Cardinal Defense Sectors Labeled (Positioned safely outside sensor nodes) */}
+                  <text x="260" y="32" fill="#38bdf8" fontSize="8.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle" letterSpacing="1">
                     SECTOR ALPHA (NORTH GATE 0°)
                   </text>
-                  <text x="460" y="145" fill="#94a3b8" fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                  <text x="475" y="164" fill="#94a3b8" fontSize="7.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
                     SECTOR BRAVO (90°)
                   </text>
-                  <text x="260" y="278" fill="#94a3b8" fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                  <text x="260" y="295" fill="#94a3b8" fontSize="7.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
                     SECTOR CHARLIE (180°)
                   </text>
-                  <text x="60" y="145" fill="#94a3b8" fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+                  <text x="45" y="164" fill="#94a3b8" fontSize="7.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
                     SECTOR DELTA (270°)
                   </text>
 
@@ -1067,27 +1067,29 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                         <line x1={tx - 4} y1={ty} x2={tx + 4} y2={ty} stroke="#ffffff" strokeWidth="1.2" />
                         <line x1={tx} y1={ty - 4} x2={tx} y2={ty + 4} stroke="#ffffff" strokeWidth="1.2" />
 
-                        {/* Tactical Target Callout Badge */}
-                        <g transform={`translate(${tx > 260 ? tx - 115 : tx + 15}, ${ty > 160 ? ty - 42 : ty + 12})`}>
-                          <rect
-                            width="105"
-                            height="34"
-                            rx="4"
-                            fill="rgba(2, 6, 23, 0.95)"
-                            stroke={isHovered ? "#38bdf8" : isDrone ? "#ef4444" : "#10b981"}
-                            strokeWidth={isHovered ? "1.8" : "1"}
-                            className="shadow-xl"
-                          />
-                          <text x="6" y="11" fill={isDrone ? "#fca5a5" : "#6ee7b7"} fontSize="8" fontWeight="bold" fontFamily="monospace">
-                            {evt.targetType.toUpperCase()}
-                          </text>
-                          <text x="6" y="21" fill="#cbd5e1" fontSize="6.5" fontFamily="monospace">
-                            {evt.distanceMeters}m | {evt.bearingDeg}° | ALT:45m
-                          </text>
-                          <text x="6" y="29" fill="#38bdf8" fontSize="6.5" fontFamily="monospace">
-                            Match: {evt.confidencePct}% | Peak: 185Hz
-                          </text>
-                        </g>
+                        {/* Tactical Target Callout Badge (Suppressed when a sensor is being hovered to prevent box collision) */}
+                        {!hoveredSensorId && (
+                          <g transform={`translate(${tx > 260 ? tx - 118 : tx + 18}, ${ty > 160 ? ty - 45 : ty + 15})`}>
+                            <rect
+                              width="108"
+                              height="34"
+                              rx="4"
+                              fill="rgba(2, 6, 23, 0.95)"
+                              stroke={isHovered ? "#38bdf8" : isDrone ? "#ef4444" : "#10b981"}
+                              strokeWidth={isHovered ? "1.8" : "1"}
+                              className="shadow-xl"
+                            />
+                            <text x="6" y="11" fill={isDrone ? "#fca5a5" : "#6ee7b7"} fontSize="8" fontWeight="bold" fontFamily="monospace">
+                              {evt.targetType.toUpperCase()}
+                            </text>
+                            <text x="6" y="21" fill="#cbd5e1" fontSize="6.5" fontFamily="monospace">
+                              {evt.distanceMeters}m | {evt.bearingDeg}° | ALT:45m
+                            </text>
+                            <text x="6" y="29" fill="#38bdf8" fontSize="6.5" fontFamily="monospace">
+                              Match: {evt.confidencePct}% | Peak: 185Hz
+                            </text>
+                          </g>
+                        )}
                       </g>
                     );
                   })}
