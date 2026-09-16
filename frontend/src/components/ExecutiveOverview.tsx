@@ -42,6 +42,8 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
   const [sweepAngle, setSweepAngle] = useState(0);
   const [radarRange, setRadarRange] = useState<150 | 300 | 500>(300);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [hoveredTargetId, setHoveredTargetId] = useState<string | null>(null);
+  const [hoveredSensorId, setHoveredSensorId] = useState<string | null>(null);
 
   // Dedicated Acoustic Probe Deck State
   const [showAcousticDeck, setShowAcousticDeck] = useState<boolean>(true);
@@ -849,7 +851,12 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                     const beamPath = `M ${sx} ${sy} L ${p1x} ${p1y} A ${beamR} ${beamR} 0 0 1 ${p2x} ${p2y} Z`;
 
                     return (
-                      <g key={sensor.id} className="cursor-pointer group">
+                      <g
+                        key={sensor.id}
+                        onMouseEnter={() => setHoveredSensorId(sensor.id)}
+                        onMouseLeave={() => setHoveredSensorId(null)}
+                        className="cursor-pointer group"
+                      >
                         {/* Acoustic Directional Listening Beam Cone */}
                         {showBeams && (
                           <g>
@@ -891,7 +898,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                           fill={isDetectingTarget ? "#0891b2" : isActive ? "#0f172a" : "#1e293b"}
                           stroke={isDetectingTarget ? "#ffffff" : isActive ? "#a855f7" : "#64748b"}
                           strokeWidth={isDetectingTarget ? "2.5" : "1.8"}
-                          className="transition-all duration-300"
+                          className="transition-all duration-300 group-hover:scale-125"
                         />
                         {isCalibrating && (
                           <circle cx={sx} cy={sy} r="16" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
@@ -931,6 +938,33 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                         >
                           {bearing}°
                         </text>
+
+                        {/* Interactive Sensor SVG Hover Card */}
+                        {hoveredSensorId === sensor.id && (
+                          <g transform={`translate(${sx > 340 ? sx - 155 : sx < 140 ? sx + 15 : sx - 75}, ${sy > 180 ? sy - 60 : sy + 15})`} className="pointer-events-none z-50">
+                            <rect
+                              width="150"
+                              height="52"
+                              rx="6"
+                              fill="rgba(2, 6, 23, 0.95)"
+                              stroke={isDetectingTarget ? "#22d3ee" : isActive ? "#a855f7" : "#64748b"}
+                              strokeWidth="1.5"
+                              className="shadow-2xl"
+                            />
+                            <text x="8" y="14" fill="#ffffff" fontSize="8.5" fontWeight="bold" fontFamily="monospace">
+                              {sensor.name || `Sensor Array S${idx + 1}`}
+                            </text>
+                            <text x="8" y="26" fill="#a855f7" fontSize="7.5" fontFamily="monospace">
+                              ID: {sensor.id} | Bearing: {bearing}°
+                            </text>
+                            <text x="8" y="37" fill="#94a3b8" fontSize="7" fontFamily="monospace">
+                              Hardware: 8-Mic MEMS Array
+                            </text>
+                            <text x="8" y="47" fill={isDetectingTarget ? "#22d3ee" : "#34d399"} fontSize="7" fontWeight="bold" fontFamily="monospace">
+                              Status: {isDetectingTarget ? "TARGET IN RANGE" : sensor.status} (-54dB)
+                            </text>
+                          </g>
+                        )}
                       </g>
                     );
                   })}
@@ -939,6 +973,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   {recentEvents.map((evt) => {
                     const isDrone = evt.targetType.includes('Drone') || evt.targetType.includes('Quadcopter') || evt.targetType.includes('FPV');
                     const isSelected = activeTarget?.id === evt.id;
+                    const isHovered = hoveredTargetId === evt.id;
 
                     const targetRad = ((evt.bearingDeg - 90) * Math.PI) / 180;
                     const distFactor = Math.min(1.05, evt.distanceMeters / radarRange);
@@ -954,7 +989,13 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                     const p2y = 160 + (130 * Math.min(1.08, distFactor + 0.10)) * Math.sin(targetRad - 0.03);
 
                     return (
-                      <g key={evt.id} onClick={() => setSelectedEventId(evt.id)} className="cursor-pointer">
+                      <g 
+                        key={evt.id} 
+                        onClick={() => setSelectedEventId(evt.id)} 
+                        onMouseEnter={() => setHoveredTargetId(evt.id)}
+                        onMouseLeave={() => setHoveredTargetId(null)}
+                        className="cursor-pointer"
+                      >
                         {/* Approach Flight Path Polyline */}
                         <polyline
                           points={`${p0x},${p0y} ${p1x},${p1y} ${p2x},${p2y} ${tx},${ty}`}
@@ -981,32 +1022,35 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                         <circle
                           cx={tx}
                           cy={ty}
-                          r={isSelected ? 10 : 8}
+                          r={isSelected || isHovered ? 11 : 8}
                           fill={isDrone ? "#dc2626" : "#059669"}
                           stroke="#ffffff"
-                          strokeWidth={isSelected ? "2.5" : "1.8"}
-                          className="drop-shadow-[0_0_12px_rgba(239,68,68,0.9)]"
+                          strokeWidth={isSelected || isHovered ? "2.5" : "1.8"}
+                          className="drop-shadow-[0_0_12px_rgba(239,68,68,0.9)] transition-all"
                         />
                         {/* Crosshair reticle inside target */}
                         <line x1={tx - 4} y1={ty} x2={tx + 4} y2={ty} stroke="#ffffff" strokeWidth="1.2" />
                         <line x1={tx} y1={ty - 4} x2={tx} y2={ty + 4} stroke="#ffffff" strokeWidth="1.2" />
 
                         {/* Tactical Target Callout Badge */}
-                        <g transform={`translate(${tx > 260 ? tx - 110 : tx + 15}, ${ty > 160 ? ty - 38 : ty + 12})`}>
+                        <g transform={`translate(${tx > 260 ? tx - 115 : tx + 15}, ${ty > 160 ? ty - 42 : ty + 12})`}>
                           <rect
-                            width="98"
-                            height="30"
+                            width="105"
+                            height="34"
                             rx="4"
-                            fill="rgba(2, 6, 23, 0.92)"
-                            stroke={isDrone ? "#ef4444" : "#10b981"}
-                            strokeWidth="1"
+                            fill="rgba(2, 6, 23, 0.95)"
+                            stroke={isHovered ? "#38bdf8" : isDrone ? "#ef4444" : "#10b981"}
+                            strokeWidth={isHovered ? "1.8" : "1"}
                             className="shadow-xl"
                           />
-                          <text x="6" y="11" fill={isDrone ? "#fca5a5" : "#6ee7b7"} fontSize="7.5" fontWeight="bold" fontFamily="monospace">
+                          <text x="6" y="11" fill={isDrone ? "#fca5a5" : "#6ee7b7"} fontSize="8" fontWeight="bold" fontFamily="monospace">
                             {evt.targetType.toUpperCase()}
                           </text>
-                          <text x="6" y="22" fill="#cbd5e1" fontSize="6.5" fontFamily="monospace">
+                          <text x="6" y="21" fill="#cbd5e1" fontSize="6.5" fontFamily="monospace">
                             {evt.distanceMeters}m | {evt.bearingDeg}° | ALT:45m
+                          </text>
+                          <text x="6" y="29" fill="#38bdf8" fontSize="6.5" fontFamily="monospace">
+                            Match: {evt.confidencePct}% | Peak: 185Hz
                           </text>
                         </g>
                       </g>
@@ -1016,7 +1060,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
               </div>
             ) : (
               /* --- MODE 2: 360° POLAR HORIZON RADAR HUD --- */
-              <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] rounded-full border-2 border-cyan-500/40 flex items-center justify-center shadow-[0_0_35px_rgba(34,211,238,0.15)] bg-[#030712] overflow-hidden select-none">
+              <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] rounded-full border-2 border-cyan-500/40 flex items-center justify-center shadow-[0_0_35px_rgba(34,211,238,0.15)] bg-[#030712] select-none">
                 {/* Concentric Distance Rings */}
                 <div className="absolute w-[85%] h-[85%] rounded-full border border-cyan-500/20 flex items-center justify-center pointer-events-none">
                   <span className="absolute top-1 text-[9px] font-mono text-cyan-500/60">{radarRange}m</span>
@@ -1062,21 +1106,23 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                   const y = 50 + radiusPct * Math.sin(rad);
                   const isDrone = evt.targetType.includes('Drone') || evt.targetType.includes('Quadcopter') || evt.targetType.includes('FPV');
                   const isSelected = activeTarget?.id === evt.id;
+                  const isHovered = hoveredTargetId === evt.id;
 
                   return (
                     <div
                       key={evt.id}
                       onClick={() => setSelectedEventId(evt.id)}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 z-20 cursor-pointer group"
+                      onMouseEnter={() => setHoveredTargetId(evt.id)}
+                      onMouseLeave={() => setHoveredTargetId(null)}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer p-2 group"
                       style={{ left: `${x}%`, top: `${y}%` }}
-                      title={`${evt.targetType} @ ${evt.bearingDeg}° (${evt.distanceMeters}m)`}
                     >
                       {isDrone && (
-                        <div className="absolute -inset-3 rounded-full bg-red-500/40 animate-ping pointer-events-none"></div>
+                        <div className="absolute inset-0 rounded-full bg-red-500/40 animate-ping pointer-events-none"></div>
                       )}
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-transform ${
-                          isSelected ? 'scale-125 ring-2 ring-white' : 'group-hover:scale-110'
+                          isSelected || isHovered ? 'scale-125 ring-2 ring-white z-40' : 'group-hover:scale-110'
                         } ${
                           isDrone
                             ? 'bg-red-500 border-white text-white shadow-[0_0_15px_rgba(239,68,68,1)]'
@@ -1085,6 +1131,48 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                       >
                         <span className="text-[9px] font-mono font-bold">●</span>
                       </div>
+
+                      {/* Interactive Target Hover Card (Polar Mode) */}
+                      {isHovered && (
+                        <div
+                          className={`absolute z-50 glass-panel p-2.5 rounded-xl border text-xs font-mono shadow-2xl whitespace-nowrap pointer-events-none transition-all ${
+                            isDrone
+                              ? 'border-red-500/80 bg-slate-950/95 text-white shadow-[0_0_25px_rgba(239,68,68,0.5)]'
+                              : 'border-emerald-500/80 bg-slate-950/95 text-white shadow-[0_0_25px_rgba(16,185,129,0.5)]'
+                          } ${
+                            y > 55 ? 'bottom-8' : 'top-8'
+                          } ${
+                            x > 55 ? 'right-0' : 'left-0'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 mb-1">
+                            <span className={`font-bold ${isDrone ? 'text-red-400' : 'text-emerald-400'}`}>
+                              {evt.targetType}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold">
+                              {evt.status}
+                            </span>
+                          </div>
+                          <div className="space-y-0.5 text-[10px] text-slate-300">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Target ID:</span>
+                              <span className="font-bold text-white">{evt.id}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Bearing:</span>
+                              <span className="font-bold text-cyan-300">{evt.bearingDeg}°</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Distance:</span>
+                              <span className="font-bold text-white">{evt.distanceMeters}m</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Confidence:</span>
+                              <span className="font-bold text-emerald-400">{evt.confidencePct}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1111,11 +1199,14 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                     360 - Math.abs(bearing - activeTarget.bearingDeg)
                   ) : 999;
                   const isDetectingTarget = activeTarget && angleDiff <= 65;
+                  const isHovered = hoveredSensorId === sensor.id;
 
                   return (
                     <div
                       key={sensor.id}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 z-25 cursor-pointer group"
+                      onMouseEnter={() => setHoveredSensorId(sensor.id)}
+                      onMouseLeave={() => setHoveredSensorId(null)}
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer p-1 group"
                       style={{ left: `${x}%`, top: `${y}%` }}
                     >
                       {isDetectingTarget && (
@@ -1141,6 +1232,44 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                       }`}>
                         {bearing}°
                       </span>
+
+                      {/* Interactive Sensor Hover Card (Polar Mode) */}
+                      {isHovered && (
+                        <div
+                          className={`absolute z-50 glass-panel p-2.5 rounded-xl border border-cyan-500/80 bg-slate-950/95 text-white text-xs font-mono shadow-2xl whitespace-nowrap pointer-events-none transition-all shadow-[0_0_25px_rgba(34,211,238,0.3)] ${
+                            y > 55 ? 'bottom-8' : 'top-8'
+                          } ${
+                            x > 55 ? 'right-0' : 'left-0'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 mb-1">
+                            <span className="font-bold text-cyan-300">
+                              {sensor.name || `Sensor Array S${idx + 1}`}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
+                              {sensor.status}
+                            </span>
+                          </div>
+                          <div className="space-y-0.5 text-[10px] text-slate-300">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Array ID:</span>
+                              <span className="font-bold text-white">{sensor.id}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Perimeter Bearing:</span>
+                              <span className="font-bold text-cyan-300">{bearing}°</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Hardware Spec:</span>
+                              <span className="text-white">8 MEMS Microphone Array</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">Noise Floor:</span>
+                              <span className="text-emerald-400 font-bold">-54 dB SNR</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

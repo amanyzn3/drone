@@ -140,6 +140,7 @@ export interface AcousticSensor {
   gainSensitivity?: number;
   windFilter?: boolean;
   azimuthCoverage?: string;
+  frequencyRange?: string;
 }
 
 export interface DetectionEvent {

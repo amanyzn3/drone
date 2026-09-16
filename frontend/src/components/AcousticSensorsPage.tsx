@@ -116,6 +116,7 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
   // Radar animation & selection state
   const [sweepAngle, setSweepAngle] = useState(0);
   const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null);
+  const [hoveredSensorId, setHoveredSensorId] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -465,6 +466,8 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                         setSelectedSensorId(sensor.id);
                         document.getElementById(`sensor-card-${sensor.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       }}
+                      onMouseEnter={() => setHoveredSensorId(sensor.id)}
+                      onMouseLeave={() => setHoveredSensorId(null)}
                       className="cursor-pointer group"
                     >
                       {/* Directional Acoustic Listening Cone */}
@@ -486,6 +489,7 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                         fill={isSelected ? "#0891b2" : isActive ? "#2e1065" : "#1e293b"}
                         stroke={isSelected ? "#ffffff" : isActive ? "#c084fc" : "#64748b"}
                         strokeWidth={isSelected ? "2.5" : "1.8"}
+                        className="transition-all duration-200 group-hover:scale-125"
                       />
                       {isCalibrating && (
                         <circle cx={sx} cy={sy} r="16" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
@@ -525,6 +529,33 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                       >
                         {bearing}°
                       </text>
+
+                      {/* Interactive Sensor SVG Hover Card */}
+                      {(hoveredSensorId === sensor.id || isSelected) && (
+                        <g transform={`translate(${sx > 320 ? sx - 155 : sx < 140 ? sx + 15 : sx - 75}, ${sy > 170 ? sy - 58 : sy + 15})`} className="pointer-events-none z-50">
+                          <rect
+                            width="150"
+                            height="52"
+                            rx="6"
+                            fill="rgba(2, 6, 23, 0.95)"
+                            stroke={isSelected ? "#22d3ee" : isActive ? "#c084fc" : "#64748b"}
+                            strokeWidth="1.5"
+                            className="shadow-2xl"
+                          />
+                          <text x="8" y="14" fill="#ffffff" fontSize="8.5" fontWeight="bold" fontFamily="monospace">
+                            {sensor.name || `Sensor Array S${idx + 1}`}
+                          </text>
+                          <text x="8" y="26" fill="#c084fc" fontSize="7.5" fontFamily="monospace">
+                            ID: {sensor.id} | Bearing: {bearing}°
+                          </text>
+                          <text x="8" y="37" fill="#94a3b8" fontSize="7" fontFamily="monospace">
+                            Freq: {sensor.frequencyRange || '100Hz - 8kHz'}
+                          </text>
+                          <text x="8" y="47" fill={isActive ? "#34d399" : "#f59e0b"} fontSize="7" fontWeight="bold" fontFamily="monospace">
+                            Status: {sensor.status.toUpperCase()} (-54dB SNR)
+                          </text>
+                        </g>
+                      )}
                     </g>
                   );
                 })}
@@ -574,6 +605,7 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                 const isActive = sensor.status === 'Active';
                 const isCalibrating = sensor.status === 'Calibrating';
                 const isSelected = selectedSensorId === sensor.id;
+                const isHovered = hoveredSensorId === sensor.id;
 
                 return (
                   <div
@@ -582,7 +614,9 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                       setSelectedSensorId(sensor.id);
                       document.getElementById(`sensor-card-${sensor.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 z-25 cursor-pointer group"
+                    onMouseEnter={() => setHoveredSensorId(sensor.id)}
+                    onMouseLeave={() => setHoveredSensorId(null)}
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer p-1 group"
                     style={{ left: `${x}%`, top: `${y}%` }}
                   >
                     {isCalibrating && (
@@ -609,6 +643,44 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                     }`}>
                       {bearing}°
                     </span>
+
+                    {/* Interactive Sensor Hover Card (Polar Mode) */}
+                    {isHovered && (
+                      <div
+                        className={`absolute z-50 glass-panel p-2.5 rounded-xl border border-purple-500/80 bg-slate-950/95 text-white text-xs font-mono shadow-2xl whitespace-nowrap pointer-events-none transition-all shadow-[0_0_25px_rgba(168,85,247,0.3)] ${
+                          y > 55 ? 'bottom-8' : 'top-8'
+                        } ${
+                          x > 55 ? 'right-0' : 'left-0'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-1 mb-1">
+                          <span className="font-bold text-purple-300">
+                            {sensor.name || `Sensor Array S${idx + 1}`}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold">
+                            {sensor.status}
+                          </span>
+                        </div>
+                        <div className="space-y-0.5 text-[10px] text-slate-300">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Array ID:</span>
+                            <span className="font-bold text-white">{sensor.id}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Perimeter Bearing:</span>
+                            <span className="font-bold text-cyan-300">{bearing}°</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Frequency Band:</span>
+                            <span className="text-white">{sensor.frequencyRange || '100Hz - 8kHz'}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Noise Floor:</span>
+                            <span className="text-emerald-400 font-bold">-54 dB SNR</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
