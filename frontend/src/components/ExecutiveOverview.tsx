@@ -263,7 +263,7 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
   };
 
   // Run Simulated Acoustic Probe fallback (available anytime, even if mic denied)
-  const handleRunSimulatedProbe = async (toneType: 'drone' | 'ambient' | 'fpv' | 'speech' = 'drone') => {
+  const handleRunSimulatedProbe = async (toneType: 'drone' | 'ambient' | 'fpv' | 'speech' | 'clear' = 'drone') => {
     try {
       setMicError(null);
       setIsAnalyzingMic(true);
@@ -546,6 +546,13 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
               className="px-2.5 py-1.5 rounded-lg bg-purple-950/30 hover:bg-purple-900/40 text-purple-400 border border-purple-500/30 font-bold flex items-center gap-1 transition-all"
             >
               <span>⚡ FPV Drone</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRunSimulatedProbe('clear')}
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1 transition-all"
+            >
+              <span>🟢 Clear Sound</span>
             </button>
             <button
               type="button"
