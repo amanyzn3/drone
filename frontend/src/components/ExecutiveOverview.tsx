@@ -929,11 +929,11 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                         <circle
                           cx={sx}
                           cy={sy}
-                          r={isDetectingTarget ? 13 : 11}
+                          r={hoveredSensorId === sensor.id ? 14 : isDetectingTarget ? 13 : 11}
                           fill={isDetectingTarget ? "#0891b2" : isActive ? "#0f172a" : "#1e293b"}
-                          stroke={isDetectingTarget ? "#ffffff" : isActive ? "#a855f7" : "#64748b"}
-                          strokeWidth={isDetectingTarget ? "2.5" : "1.8"}
-                          className="transition-all duration-300 group-hover:scale-125"
+                          stroke={hoveredSensorId === sensor.id ? "#ffffff" : isDetectingTarget ? "#ffffff" : isActive ? "#a855f7" : "#64748b"}
+                          strokeWidth={hoveredSensorId === sensor.id ? "2.8" : isDetectingTarget ? "2.5" : "1.8"}
+                          className="transition-all duration-200"
                         />
                         {isCalibrating && (
                           <circle cx={sx} cy={sy} r="16" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
@@ -1158,8 +1158,8 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                         <div className="absolute inset-0 rounded-full bg-red-500/40 animate-ping pointer-events-none"></div>
                       )}
                       <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-transform ${
-                          isSelected || isHovered ? 'scale-125 ring-2 ring-white z-40' : 'group-hover:scale-110'
+                        className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors ${
+                          isSelected || isHovered ? 'ring-4 ring-white shadow-[0_0_20px_rgba(239,68,68,1)] z-40' : ''
                         } ${
                           isDrone
                             ? 'bg-red-500 border-white text-white shadow-[0_0_15px_rgba(239,68,68,1)]'
@@ -1252,9 +1252,11 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                       <div
                         className={`w-6 h-6 rounded-lg flex items-center justify-center border-2 transition-all shadow-md ${
                           isDetectingTarget
-                            ? 'bg-cyan-500 border-white text-black font-bold scale-110 shadow-[0_0_18px_rgba(34,211,238,0.9)] animate-pulse'
+                            ? 'bg-cyan-500 border-white text-black font-bold ring-2 ring-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.9)] animate-pulse'
+                            : isHovered
+                            ? 'bg-[#0e1738] border-white text-cyan-300 ring-2 ring-cyan-400 shadow-[0_0_18px_rgba(34,211,238,0.8)]'
                             : isActive
-                            ? 'bg-[#0e1738] border-purple-400 text-purple-300 hover:scale-125 hover:border-white shadow-[0_0_12px_rgba(168,85,247,0.6)]'
+                            ? 'bg-[#0e1738] border-purple-400 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.6)]'
                             : isCalibrating
                             ? 'bg-amber-950/90 border-amber-400 text-amber-300 animate-pulse'
                             : 'bg-slate-900 border-slate-700 text-slate-500'

@@ -124,8 +124,8 @@ export const RadarCompass: React.FC<RadarCompassProps> = ({ events, isSimulating
                   )}
 
                   <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-transform ${
-                      isHovered ? 'scale-125 ring-2 ring-white z-40' : 'group-hover:scale-110'
+                    className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors ${
+                      isHovered ? 'ring-4 ring-white shadow-[0_0_20px_rgba(239,68,68,1)] z-40' : ''
                     } ${
                       isDroneTarget
                         ? 'bg-red-500 border-white text-white shadow-[0_0_15px_rgba(239,68,68,1)]'

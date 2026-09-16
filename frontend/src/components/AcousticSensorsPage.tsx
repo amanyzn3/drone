@@ -485,11 +485,11 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                       <circle
                         cx={sx}
                         cy={sy}
-                        r={isSelected ? 13 : 11}
+                        r={isSelected || hoveredSensorId === sensor.id ? 14 : 11}
                         fill={isSelected ? "#0891b2" : isActive ? "#2e1065" : "#1e293b"}
-                        stroke={isSelected ? "#ffffff" : isActive ? "#c084fc" : "#64748b"}
-                        strokeWidth={isSelected ? "2.5" : "1.8"}
-                        className="transition-all duration-200 group-hover:scale-125"
+                        stroke={isSelected || hoveredSensorId === sensor.id ? "#ffffff" : isActive ? "#c084fc" : "#64748b"}
+                        strokeWidth={isSelected || hoveredSensorId === sensor.id ? "2.5" : "1.8"}
+                        className="transition-all duration-200"
                       />
                       {isCalibrating && (
                         <circle cx={sx} cy={sy} r="16" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
@@ -626,9 +626,11 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                     <div
                       className={`w-6 h-6 rounded-lg flex items-center justify-center border-2 transition-all shadow-lg ${
                         isSelected
-                          ? 'scale-125 ring-2 ring-white border-cyan-400 bg-cyan-600 text-white shadow-[0_0_20px_rgba(34,211,238,0.9)]'
+                          ? 'ring-4 ring-cyan-300 border-white bg-cyan-600 text-white shadow-[0_0_20px_rgba(34,211,238,0.9)]'
+                          : isHovered
+                          ? 'bg-purple-900/90 border-white text-purple-200 ring-2 ring-purple-400 shadow-[0_0_18px_rgba(168,85,247,0.8)]'
                           : isActive
-                          ? 'bg-purple-900/90 border-purple-400 text-purple-200 group-hover:scale-115 group-hover:border-white shadow-[0_0_15px_rgba(168,85,247,0.7)]'
+                          ? 'bg-purple-900/90 border-purple-400 text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.7)]'
                           : isCalibrating
                           ? 'bg-amber-950/90 border-amber-400 text-amber-300 animate-pulse'
                           : 'bg-slate-900 border-slate-700 text-slate-500'
