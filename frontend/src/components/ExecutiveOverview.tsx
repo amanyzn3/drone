@@ -964,9 +964,6 @@ export const ExecutiveOverview: React.FC<ExecutiveOverviewProps> = ({
                           strokeWidth={hoveredSensorId === sensor.id ? "2.8" : isDetectingTarget ? "2.5" : "1.8"}
                           className="transition-all duration-200"
                         />
-                        {isCalibrating && (
-                          <circle cx={sx} cy={sy} r="16" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
-                        )}
 
                         <text
                           x={sx}

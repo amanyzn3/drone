@@ -491,9 +491,6 @@ export const AcousticSensorsPage: React.FC<AcousticSensorsPageProps> = ({
                         strokeWidth={isSelected || hoveredSensorId === sensor.id ? "2.5" : "1.8"}
                         className="transition-all duration-200"
                       />
-                      {isCalibrating && (
-                        <circle cx={sx} cy={sy} r="16" fill="none" stroke="#c084fc" strokeWidth="1.5" strokeDasharray="3 3" className="animate-spin" />
-                      )}
 
                       <text
                         x={sx}
